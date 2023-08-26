@@ -24,10 +24,31 @@ export const PageWrapper = styled.div`
 // Mostly copied from `AppBody` but it was getting too hard to maintain backwards compatibility.
 export const SwapWrapper = styled.main<{ isDark?: boolean }>`
   position: relative;
-  background: ${({ theme }) => theme.surface1};
+  background: linear-gradient(135deg, #7a2ed6 0%, #9e49db 100%);
   border-radius: 24px;
   border: 1px solid ${({ theme }) => theme.surface3};
   padding: 8px;
+  margin-top: 2rem;
+  padding-top: 12px;
+  box-shadow: ${({ isDark }) =>
+    `0px 0px 10px 0px rgba(252, 114, 255, ${isDark ? '0.08' : '0.04'}), 0px 40px 120px 0px rgba(252, 114, 255, ${
+      isDark ? '0.18' : '0.12'
+    })`};
+  z-index: ${Z_INDEX.default};
+  transition: transform 250ms ease;
+
+  &:hover {
+    border: 1px solid ${({ theme }) => theme.surface3};
+  }
+`
+
+export const SwapWrapperMulti = styled.main<{ isDark?: boolean }>`
+  position: relative;
+  background: linear-gradient(135deg, #7a2ed6 0%, #9e49db 100%);
+  border-radius: 24px;
+  border: 1px solid ${({ theme }) => theme.surface3};
+  padding: 8px;
+  margin-top: -2rem;
   padding-top: 12px;
   box-shadow: ${({ isDark }) =>
     `0px 0px 10px 0px rgba(252, 114, 255, ${isDark ? '0.08' : '0.04'}), 0px 40px 120px 0px rgba(252, 114, 255, ${

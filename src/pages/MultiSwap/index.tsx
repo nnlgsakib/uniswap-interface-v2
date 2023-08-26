@@ -1,36 +1,19 @@
-import { Trans } from '@lingui/macro'
-import {
-  BrowserEvent,
-  InterfaceElementName,
-  InterfaceEventName,
-  InterfacePageName,
-  InterfaceSectionName,
-  SharedEventName,
-  SwapEventName,
-} from '@uniswap/analytics-events'
+import { InterfacePageName, SwapEventName } from '@uniswap/analytics-events'
 import { ChainId, Currency, CurrencyAmount, Percent, Token } from '@uniswap/sdk-core'
 import { UNIVERSAL_ROUTER_ADDRESS } from '@uniswap/universal-router-sdk'
 import { useWeb3React } from '@web3-react/core'
-import { sendAnalyticsEvent, Trace, TraceEvent, useTrace } from 'analytics'
+import { sendAnalyticsEvent, Trace, useTrace } from 'analytics'
 import { useToggleAccountDrawer } from 'components/AccountDrawer'
-import AddressInputPanel from 'components/AddressInputPanel'
-import { ButtonError, ButtonLight, ButtonPrimary } from 'components/Button'
-import { GrayCard } from 'components/Card'
-import { AutoColumn } from 'components/Column'
-import SwapCurrencyInputPanel from 'components/CurrencyInputPanel/SwapCurrencyInputPanel'
+import AssetItem, { assets } from 'components/AssetItems'
 import { NetworkAlert } from 'components/NetworkAlert/NetworkAlert'
-import { AutoRow } from 'components/Row'
+import SearchInputComponent from 'components/SearchInput'
 import confirmPriceImpactWithoutFee from 'components/swap/confirmPriceImpactWithoutFee'
 import ConfirmSwapModal from 'components/swap/ConfirmSwapModal'
 import PriceImpactModal from 'components/swap/PriceImpactModal'
-import PriceImpactWarning from 'components/swap/PriceImpactWarning'
-import { ArrowWrapper, PageWrapper, SwapWrapper } from 'components/swap/styled'
-import SwapDetailsDropdown from 'components/swap/SwapDetailsDropdown'
+import { PageWrapper, SwapWrapperMulti } from 'components/swap/styled'
 import SwapHeader from 'components/swap/SwapHeader'
-import SwitchButton from 'components/SwitchButton'
 import { SwitchLocaleLink } from 'components/SwitchLocaleLink'
 import TokenSafetyModal from 'components/TokenSafety/TokenSafetyModal'
-import { getChainInfo } from 'constants/chainInfo'
 import { asSupportedChain, isSupportedChain } from 'constants/chains'
 import { getSwapCurrencyId, TOKEN_SHORTHANDS } from 'constants/tokens'
 import { useCurrency, useDefaultActiveTokens } from 'hooks/Tokens'
@@ -41,14 +24,11 @@ import usePrevious from 'hooks/usePrevious'
 import { SwapResult, useSwapCallback } from 'hooks/useSwapCallback'
 import { useSwitchChain } from 'hooks/useSwitchChain'
 import { useUSDPrice } from 'hooks/useUSDPrice'
-import useWrapCallback, { WrapErrorText, WrapType } from 'hooks/useWrapCallback'
+import useWrapCallback, { WrapType } from 'hooks/useWrapCallback'
 import JSBI from 'jsbi'
 import { formatSwapQuoteReceivedEventProperties } from 'lib/utils/analytics'
-import MultiSwapPage from 'pages/MultiSwap'
 import { ReactNode, useCallback, useEffect, useMemo, useReducer, useState } from 'react'
-import { ArrowDown } from 'react-feather'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Text } from 'rebass'
 import { useAppSelector } from 'state/hooks'
 import { InterfaceTrade, TradeState } from 'state/routing/types'
 import { isClassicTrade, isUniswapXTrade } from 'state/routing/utils'
@@ -56,7 +36,6 @@ import { Field, replaceSwapState } from 'state/swap/actions'
 import { useDefaultsFromURLSearch, useDerivedSwapInfo, useSwapActionHandlers } from 'state/swap/hooks'
 import swapReducer, { initialState as initialSwapState, SwapState } from 'state/swap/reducer'
 import styled, { useTheme } from 'styled-components'
-import { LinkStyledButton, ThemedText } from 'theme'
 import { maybeLogFirstSwapAction } from 'tracing/swapFlowLoggers'
 import { computeFiatValuePriceImpact } from 'utils/computeFiatValuePriceImpact'
 import { formatCurrencyAmount, NumberType } from 'utils/formatNumbers'
@@ -64,20 +43,131 @@ import { maxAmountSpend } from 'utils/maxAmountSpend'
 import { computeRealizedPriceImpact, warningSeverity } from 'utils/prices'
 import { didUserReject } from 'utils/swapErrorToUserReadableMessage'
 
+import arrow from '../../assets/images/arrow3.png'
+import drp from '../../assets/images/dropdown.svg'
+import eth from '../../assets/images/ethereum-logo.png'
+import bnb from '../../assets/svg/bnb-logo.svg'
+import polygon from '../../assets/svg/polygon-matic-logo.svg'
 import { useScreenSize } from '../../hooks/useScreenSize'
 import { useIsDarkMode } from '../../theme/components/ThemeToggle'
-import { UniswapXOptIn } from './UniswapXOptIn'
-export const ArrowContainer = styled.div`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+import CurrencyModal from './Modal'
+// import { UniswapXOptIn } from './UniswapXOptIn'
 
+const ArrowContainer = styled.div`
+  position: absolute;
+  top: 57%;
+  transform: translateY(-50%);
+  right: 12.3rem;
+
+  @media (max-width: 768px) {
+    right: 12.5rem;
+  }
+
+  @media (max-width: 480px) {
+    right: 10.5rem;
+  }
+`
+
+const Container = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`
+
+const LeftContainer = styled.div`
+  flex: 1;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+`
+
+const InputBackground = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  background-color: #f9f9f9;
+  height: 7rem;
+  border-radius: 0.5rem;
+  padding: 1rem;
+`
+const InputMainBackground = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  background-color: #ccc;
+  height: 7rem;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  position: relative;
+`
+
+const AssetToggle = styled.div`
+  position: absolute;
+  top: 0.5rem;
+`
+const AssetToggleTwo = styled.div`
+  position: absolute;
+  top: 1rem;
+`
+
+const AssetToggleThree = styled.div`
+  position: absolute;
+  bottom: 5rem;
+`
+
+const ButtonToggle = styled.button`
+  background: transparent;
+  border: none;
+  cursor: pointer;
+`
+const InputContainer = styled.div`
+  display: flex;
+  align-items: baseline;
+`
+
+const AssetContainer = styled.div`
+  display: flex;
+  align-items: center;
+  background: #5a5a5a;
+  height: 2rem;
+  border-radius: 0.5rem;
+`
+
+const Input = styled.input`
   width: 100%;
-  height: 100%;
+  outline: none;
+  padding: 0.5rem;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  color: #989898;
+`
+const ModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+`
+
+const PercentSign = styled.div`
+  margin-left: 0.5rem;
+  background: #989898;
+  font-size: 1.5rem;
+  border-radius: 0.5rem;
+  color: #000;
+`
+
+const RightContainer = styled.div`
+  flex: 1;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
 `
 
 const SwapSection = styled.div`
-  background-color: #ccc;
+  background-color: ${({ theme }) => theme.surface2};
   border-radius: 16px;
   color: ${({ theme }) => theme.neutral2};
   font-size: 14px;
@@ -116,12 +206,6 @@ const OutputSwapSection = styled(SwapSection)`
   border-bottom: ${({ theme }) => `1px solid ${theme.surface1}`};
 `
 
-const MultiswapContainer = styled.div`
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-`
-
 function getIsValidSwapQuote(
   trade: InterfaceTrade | undefined,
   tradeState: TradeState,
@@ -141,7 +225,7 @@ function largerPercentValue(a?: Percent, b?: Percent) {
   return undefined
 }
 
-export default function SwapPage({ className }: { className?: string }) {
+export default function MultiSwapPage({ className }: { className?: string }) {
   const { chainId: connectedChainId } = useWeb3React()
   const loadedUrlParams = useDefaultsFromURLSearch()
 
@@ -156,8 +240,12 @@ export default function SwapPage({ className }: { className?: string }) {
           className={className}
           chainId={supportedChainId ?? ChainId.MAINNET}
           prefilledState={{
-            [Field.INPUT]: { currencyId: loadedUrlParams?.[Field.INPUT]?.currencyId },
-            [Field.OUTPUT]: { currencyId: loadedUrlParams?.[Field.OUTPUT]?.currencyId },
+            [Field.INPUT]: {
+              currencyId: loadedUrlParams?.[Field.INPUT]?.currencyId,
+            },
+            [Field.OUTPUT]: {
+              currencyId: loadedUrlParams?.[Field.OUTPUT]?.currencyId,
+            },
           }}
           disableTokenInputs={supportedChainId === undefined}
         />
@@ -175,7 +263,7 @@ export default function SwapPage({ className }: { className?: string }) {
  * However if this component is being used in a context that displays information from a different, unconnected
  * chain (e.g. the TDP), then chainId should refer to the unconnected chain.
  */
-export function Swap({
+function Swap({
   className,
   prefilledState = {},
   chainId,
@@ -241,7 +329,10 @@ export function Swap({
   const toggleWalletDrawer = useToggleAccountDrawer()
 
   // swap state
-  const [state, dispatch] = useReducer(swapReducer, { ...initialSwapState, ...prefilledState })
+  const [state, dispatch] = useReducer(swapReducer, {
+    ...initialSwapState,
+    ...prefilledState,
+  })
   const { typedValue, recipient, independentField } = state
 
   const previousConnectedChainId = usePrevious(connectedChainId)
@@ -405,7 +496,10 @@ export function Swap({
   )
   const showMaxButton = Boolean(maxInputAmount?.greaterThan(0) && !parsedAmounts[Field.INPUT]?.equalTo(maxInputAmount))
   const swapFiatValues = useMemo(() => {
-    return { amountIn: fiatValueTradeInput.data, amountOut: fiatValueTradeOutput.data }
+    return {
+      amountIn: fiatValueTradeInput.data,
+      amountOut: fiatValueTradeOutput.data,
+    }
   }, [fiatValueTradeInput, fiatValueTradeOutput])
 
   // the callback to execute the swap
@@ -489,7 +583,10 @@ export function Swap({
 
     const marketPriceImpact = trade?.priceImpact ? computeRealizedPriceImpact(trade) : undefined
     const largerPriceImpact = largerPercentValue(marketPriceImpact, preTaxStablecoinPriceImpact)
-    return { priceImpactSeverity: warningSeverity(largerPriceImpact), largerPriceImpact }
+    return {
+      priceImpactSeverity: warningSeverity(largerPriceImpact),
+      largerPriceImpact,
+    }
   }, [preTaxStablecoinPriceImpact, trade])
 
   const handleConfirmDismiss = useCallback(() => {
@@ -501,7 +598,10 @@ export function Swap({
   }, [onUserInput, swapResult])
 
   const handleAcceptChanges = useCallback(() => {
-    setSwapState((currentState) => ({ ...currentState, tradeToConfirm: trade }))
+    setSwapState((currentState) => ({
+      ...currentState,
+      tradeToConfirm: trade,
+    }))
   }, [trade])
 
   const handleInputSelect = useCallback(
@@ -559,20 +659,54 @@ export function Swap({
   const showOptInSmall = !useScreenSize().navSearchInputVisible
   const isDark = useIsDarkMode()
 
-  const [show, setShow] = useState(true)
+  const [isModalOpenOne, setIsModalOpenOne] = useState(false)
+  const [isModalOpenTwo, setIsModalOpenTwo] = useState(false)
+  const [isModalOpenThree, setIsModalOpenThree] = useState(false)
 
-  const Handler = () => {
-    setShow(!show)
+  const toggleModalOne = () => {
+    setIsModalOpenOne(!isModalOpenOne)
   }
 
-  const [activeTab, setActiveTab] = useState('simple') // 'simple' or 'multi'
+  const toggleModalTwo = () => {
+    setIsModalOpenTwo(!isModalOpenTwo)
+  }
 
-  const handleTabClick = (tab: any) => {
-    setActiveTab(tab)
+  const toggleModalThree = () => {
+    setIsModalOpenThree(!isModalOpenThree)
+  }
+
+  const [selectedAsset, setSelectedAsset] = useState({
+    logoSrc: eth,
+    name: 'Ether',
+    symbol: 'ETH',
+  })
+  const [selectedAssetTwo, setSelectedAssetTwo] = useState({
+    logoSrc: polygon,
+    name: 'Polygon',
+    symbol: 'Matic',
+  })
+  const [selectedAssetThree, setSelectedAssetThree] = useState({
+    logoSrc: bnb,
+    name: 'BNB',
+    symbol: 'BNB',
+  })
+  const handleAssetSelection = (asset: any) => {
+    setSelectedAsset(asset)
+    toggleModalOne() // Close the modal after asset selection if needed
+  }
+
+  const handleAssetSelectionTwo = (asset: any) => {
+    setSelectedAssetTwo(asset)
+    toggleModalTwo() // Close the modal after asset selection if needed
+  }
+
+  const handleAssetSelectionThree = (asset: any) => {
+    setSelectedAssetThree(asset)
+    toggleModalThree() // Close the modal after asset selection if needed
   }
 
   const swapElement = (
-    <SwapWrapper isDark={isDark} className={className} id="swap-page">
+    <SwapWrapperMulti isDark={isDark} className={className} id="swap-page">
       <TokenSafetyModal
         isOpen={importTokensNotInDefault.length > 0 && !dismissTokenWarning}
         tokenAddress={importTokensNotInDefault[0]?.address}
@@ -609,201 +743,277 @@ export function Swap({
           }}
         />
       )}
+      {/* container */}
+      <Container>
+        {/* container-one */}
+        {/* <LeftContainer>
+          <InputMainBackground>
+            <AssetToggle>
+              <div>
+                <ButtonToggle onClick={toggleModal}>
+                  <AssetContainer style={{ display: 'flex', alignItems: 'center' }}>
+                    <img
+                      src={eth}
+                      style={{
+                        // width: '50px',
+                        height: '20px',
+                        objectFit: 'contain',
+                        objectPosition: 'right',
+                        marginRight: '10px',
+                      }}
+                      alt="logo"
+                    />
+                    <p style={{ color: '#000', fontSize: '1rem' }}>ETH</p>
+                    <img src={drp} style={{ width: '25px', marginLeft: '2px' }} alt="dropdown" />
+                  </AssetContainer>
+                </ButtonToggle>
+              </div>
+            </AssetToggle>
+            <div>
+              <Input style={{ width: '100%' }} type="number" defaultValue={0} />
+            </div>
+          </InputMainBackground>
+          <div>
+            {isModalOpen && (
+              <CurrencyModal onClose={toggleModal} isModalOpen={isModalOpen}>
+                <ModalHeader>
+                  <h4 style={{ color: '#000' }}>Select a token</h4>
+                  <p
+                    style={{
+                      color: '#000',
+                      fontSize: '1.5rem',
+                      cursor: 'pointer',
+                    }}
+                    onClick={toggleModal}
+                  >
+                    X
+                  </p>
+                </ModalHeader>
 
-      <div style={{ display: 'relative' }}>
-        <SwapSection>
-          <Trace section={InterfaceSectionName.CURRENCY_INPUT_PANEL}>
-            <SwapCurrencyInputPanel
-              label={<Trans>You pay</Trans>}
-              disabled={disableTokenInputs}
-              value={formattedAmounts[Field.INPUT]}
-              showMaxButton={showMaxButton}
-              currency={currencies[Field.INPUT] ?? null}
-              onUserInput={handleTypeInput}
-              onMax={handleMaxInput}
-              fiatValue={showFiatValueInput ? fiatValueInput : undefined}
-              onCurrencySelect={handleInputSelect}
-              otherCurrency={currencies[Field.OUTPUT]}
-              showCommonBases
-              id={InterfaceSectionName.CURRENCY_INPUT_PANEL}
-              loading={independentField === Field.OUTPUT && routeIsSyncing}
+                <div>
+                  {assets.map((asset, index) => (
+                    <AssetItem
+                      key={index}
+                      logoSrc={asset.logoSrc}
+                      name={asset.name}
+                      symbol={asset.symbol}
+                      onClick={() => handleAssetSelection(asset)} // Handle asset selection
+                    />
+                  ))}
+                </div>
+              </CurrencyModal>
+            )}
+          </div>
+        </LeftContainer> */}
+        <ArrowContainer>
+          <img src={arrow} width={40} alt="arrow" />
+        </ArrowContainer>
+        <LeftContainer>
+          <InputMainBackground>
+            <AssetToggle>
+              <div>
+                <ButtonToggle onClick={toggleModalOne}>
+                  <AssetContainer style={{ display: 'flex', alignItems: 'center' }}>
+                    <img
+                      src={selectedAsset?.logoSrc || eth} // Use selected asset logo or default
+                      style={{
+                        height: '20px',
+                        objectFit: 'contain',
+                        objectPosition: 'right',
+                        marginRight: '10px',
+                      }}
+                      alt="logo"
+                    />
+                    <p style={{ color: '#000', fontSize: '1rem' }}>{selectedAsset?.name || 'ETH'}</p>
+                    <img src={drp} style={{ width: '25px', marginLeft: '2px' }} alt="dropdown" />
+                  </AssetContainer>
+                </ButtonToggle>
+              </div>
+            </AssetToggle>
+            <div>
+              <Input style={{ width: '100%' }} type="number" defaultValue={0} />
+            </div>
+          </InputMainBackground>
+          <div>
+            {isModalOpenOne && (
+              <CurrencyModal onClose={toggleModalOne} isModalOpen={isModalOpenOne}>
+                <ModalHeader>
+                  <h4 style={{ color: '#000' }}>Select a token</h4>
+                  <p
+                    style={{
+                      color: '#000',
+                      fontSize: '1.5rem',
+                      cursor: 'pointer',
+                    }}
+                    onClick={toggleModalOne}
+                  >
+                    X
+                  </p>
+                </ModalHeader>
+                <SearchInputComponent />
+                <div>
+                  {assets.map((asset, index) => (
+                    <AssetItem
+                      key={index}
+                      logoSrc={asset.logoSrc}
+                      name={asset.name}
+                      symbol={asset.symbol}
+                      onClick={() => handleAssetSelection(asset)}
+                    />
+                  ))}
+                </div>
+              </CurrencyModal>
+            )}
+          </div>
+        </LeftContainer>
+
+        <RightContainer>
+          <div>
+            <InputBackground>
+              <div>
+                <AssetToggleTwo>
+                  <div>
+                    <ButtonToggle onClick={toggleModalTwo}>
+                      <AssetContainer style={{ display: 'flex', alignItems: 'center' }}>
+                        <img
+                          src={selectedAssetTwo?.logoSrc || polygon}
+                          style={{
+                            height: '20px',
+                            objectFit: 'contain',
+                            objectPosition: 'right',
+                            marginRight: '10px',
+                          }}
+                          alt="logo"
+                        />
+                        <p style={{ color: '#000', fontSize: '1rem' }}>{selectedAssetTwo?.name || 'ETH'}</p>
+                        <img src={drp} style={{ width: '25px', marginLeft: '2px' }} alt="dropdown" />
+                      </AssetContainer>
+                    </ButtonToggle>
+                  </div>
+                </AssetToggleTwo>
+              </div>
+              <div>
+                <InputContainer>
+                  <Input style={{ width: '100%' }} type="number" defaultValue={0} />
+                  <PercentSign>%</PercentSign>
+                </InputContainer>
+              </div>
+              {isModalOpenTwo && (
+                <CurrencyModal onClose={toggleModalTwo} isModalOpen={isModalOpenTwo}>
+                  <ModalHeader>
+                    <h4 style={{ color: '#000' }}>Select a token</h4>
+                    <p
+                      style={{
+                        color: '#000',
+                        fontSize: '1.5rem',
+                        cursor: 'pointer',
+                      }}
+                      onClick={toggleModalTwo}
+                    >
+                      X
+                    </p>
+                  </ModalHeader>
+                  <SearchInputComponent />
+                  <div>
+                    {assets.map((asset, index) => (
+                      <AssetItem
+                        key={index}
+                        logoSrc={asset.logoSrc}
+                        name={asset.name}
+                        symbol={asset.symbol}
+                        onClick={() => handleAssetSelectionTwo(asset)}
+                      />
+                    ))}
+                  </div>
+                </CurrencyModal>
+              )}
+            </InputBackground>
+          </div>
+
+          {/* {showDetailsDropdown && (
+            <SwapDetailsDropdown
+              trade={trade}
+              syncing={routeIsSyncing}
+              loading={routeIsLoading}
+              allowedSlippage={allowedSlippage}
             />
-          </Trace>
-        </SwapSection>
-        <ArrowWrapper clickable={isSupportedChain(chainId)}>
-          <TraceEvent
-            events={[BrowserEvent.onClick]}
-            name={SwapEventName.SWAP_TOKENS_REVERSED}
-            element={InterfaceElementName.SWAP_TOKENS_REVERSE_ARROW_BUTTON}
-          >
-            <ArrowContainer
-              data-testid="swap-currency-button"
-              onClick={() => {
-                if (disableTokenInputs) return
-                onSwitchTokens()
-                maybeLogFirstSwapAction(trace)
-              }}
-              color={theme.neutral1}
-            >
-              <ArrowDown size="16" color={theme.neutral1} />
-            </ArrowContainer>
-          </TraceEvent>
-        </ArrowWrapper>
-      </div>
-      <AutoColumn gap="xs">
-        <div>
-          <OutputSwapSection>
-            <Trace section={InterfaceSectionName.CURRENCY_OUTPUT_PANEL}>
-              <SwapCurrencyInputPanel
-                value={formattedAmounts[Field.OUTPUT]}
-                disabled={disableTokenInputs}
-                onUserInput={handleTypeOutput}
-                label={<Trans>You receive</Trans>}
-                showMaxButton={false}
-                hideBalance={false}
-                fiatValue={showFiatValueOutput ? fiatValueOutput : undefined}
-                priceImpact={stablecoinPriceImpact}
-                currency={currencies[Field.OUTPUT] ?? null}
-                onCurrencySelect={handleOutputSelect}
-                otherCurrency={currencies[Field.INPUT]}
-                showCommonBases
-                id={InterfaceSectionName.CURRENCY_OUTPUT_PANEL}
-                loading={independentField === Field.INPUT && routeIsSyncing}
-              />
-            </Trace>
-            {recipient !== null && !showWrap ? (
-              <>
-                <AutoRow justify="space-between" style={{ padding: '0 1rem' }}>
-                  <ArrowWrapper clickable={false}>
-                    <ArrowDown size="16" color={theme.neutral2} />
-                  </ArrowWrapper>
-                  <LinkStyledButton id="remove-recipient-button" onClick={() => onChangeRecipient(null)}>
-                    <Trans>- Remove recipient</Trans>
-                  </LinkStyledButton>
-                </AutoRow>
-                <AddressInputPanel id="recipient" value={recipient} onChange={onChangeRecipient} />
-              </>
-            ) : null}
-          </OutputSwapSection>
-        </div>
-        {showDetailsDropdown && (
-          <SwapDetailsDropdown
-            trade={trade}
-            syncing={routeIsSyncing}
-            loading={routeIsLoading}
-            allowedSlippage={allowedSlippage}
-          />
-        )}
-        {showPriceImpactWarning && <PriceImpactWarning priceImpact={largerPriceImpact} />}
-        <div>
-          {swapIsUnsupported ? (
-            <ButtonPrimary $borderRadius="16px" disabled={true}>
-              <ThemedText.DeprecatedMain mb="4px">
-                <Trans>Unsupported Asset</Trans>
-              </ThemedText.DeprecatedMain>
-            </ButtonPrimary>
-          ) : switchingChain ? (
-            <ButtonPrimary $borderRadius="16px" disabled={true}>
-              <Trans>Connecting to {getChainInfo(switchingChain)?.label}</Trans>
-            </ButtonPrimary>
-          ) : !account ? (
-            <TraceEvent
-              events={[BrowserEvent.onClick]}
-              name={InterfaceEventName.CONNECT_WALLET_BUTTON_CLICKED}
-              properties={{ received_swap_quote: getIsValidSwapQuote(trade, tradeState, swapInputError) }}
-              element={InterfaceElementName.CONNECT_WALLET_BUTTON}
-            >
-              <ButtonLight onClick={toggleWalletDrawer} fontWeight={535} $borderRadius="16px">
-                <Trans>Connect Wallet</Trans>
-              </ButtonLight>
-            </TraceEvent>
-          ) : chainId && chainId !== connectedChainId ? (
-            <ButtonPrimary
-              $borderRadius="16px"
-              onClick={async () => {
-                try {
-                  await switchChain(connector, chainId)
-                } catch (error) {
-                  if (didUserReject(error)) {
-                    // Ignore error, which keeps the user on the previous chain.
-                  } else {
-                    // TODO(WEB-3306): This UX could be improved to show an error state.
-                    throw error
-                  }
-                }
-              }}
-            >
-              Connect to {getChainInfo(chainId)?.label}
-            </ButtonPrimary>
-          ) : showWrap ? (
-            <ButtonPrimary
-              $borderRadius="16px"
-              disabled={Boolean(wrapInputError)}
-              onClick={handleOnWrap}
-              fontWeight={535}
-              data-testid="wrap-button"
-            >
-              {wrapInputError ? (
-                <WrapErrorText wrapInputError={wrapInputError} />
-              ) : wrapType === WrapType.WRAP ? (
-                <Trans>Wrap</Trans>
-              ) : wrapType === WrapType.UNWRAP ? (
-                <Trans>Unwrap</Trans>
-              ) : null}
-            </ButtonPrimary>
-          ) : routeNotFound && userHasSpecifiedInputOutput && !routeIsLoading && !routeIsSyncing ? (
-            <GrayCard style={{ textAlign: 'center' }}>
-              <ThemedText.DeprecatedMain mb="4px">
-                <Trans>Insufficient liquidity for this trade.</Trans>
-              </ThemedText.DeprecatedMain>
-            </GrayCard>
-          ) : (
-            <TraceEvent
-              events={[BrowserEvent.onClick]}
-              name={SharedEventName.ELEMENT_CLICKED}
-              element={InterfaceElementName.SWAP_BUTTON}
-            >
-              <ButtonError
-                onClick={() => {
-                  showPriceImpactWarning ? setShowPriceImpactModal(true) : handleContinueToReview()
-                }}
-                id="swap-button"
-                data-testid="swap-button"
-                disabled={!getIsValidSwapQuote(trade, tradeState, swapInputError)}
-                error={!swapInputError && priceImpactSeverity > 2 && allowance.state === AllowanceState.ALLOWED}
-              >
-                <Text fontSize={20}>
-                  {swapInputError ? (
-                    swapInputError
-                  ) : routeIsSyncing || routeIsLoading ? (
-                    <Trans>Swap</Trans>
-                  ) : priceImpactSeverity > 2 ? (
-                    <Trans>Swap Anyway</Trans>
-                  ) : (
-                    <Trans>Swap</Trans>
-                  )}
-                </Text>
-              </ButtonError>
-            </TraceEvent>
-          )}
-        </div>
-      </AutoColumn>
-      {!showOptInSmall && <UniswapXOptIn isSmall={false} swapInfo={swapInfo} />}
-    </SwapWrapper>
+          )} */}
+          {/* </AutoColumn> */}
+
+          {/* <div style={{ marginTop: '3rem' }}>
+            <InputBackground>
+              <InputContainer>
+                <Input style={{ width: '100%' }} type="number" defaultValue={0} />
+                <PercentSign>%</PercentSign>
+              </InputContainer>
+            </InputBackground>
+          </div> */}
+
+          <div style={{ marginTop: '2rem' }}>
+            <InputBackground>
+              <div>
+                <AssetToggleThree>
+                  <div>
+                    <ButtonToggle onClick={toggleModalThree}>
+                      <AssetContainer style={{ display: 'flex', alignItems: 'center' }}>
+                        <img
+                          src={selectedAssetThree?.logoSrc || bnb}
+                          style={{
+                            height: '20px',
+                            objectFit: 'contain',
+                            objectPosition: 'right',
+                            marginRight: '10px',
+                          }}
+                          alt="logo"
+                        />
+                        <p style={{ color: '#000', fontSize: '1rem' }}>{selectedAssetThree?.name || 'ETH'}</p>
+                        <img src={drp} style={{ width: '25px', marginLeft: '2px' }} alt="dropdown" />
+                      </AssetContainer>
+                    </ButtonToggle>
+                  </div>
+                </AssetToggleThree>
+              </div>
+              <div>
+                <InputContainer>
+                  <Input style={{ width: '100%' }} type="number" defaultValue={0} />
+                  <PercentSign>%</PercentSign>
+                </InputContainer>
+              </div>
+              {isModalOpenThree && (
+                <CurrencyModal onClose={toggleModalThree} isModalOpen={isModalOpenThree}>
+                  <ModalHeader>
+                    <h4 style={{ color: '#000' }}>Select a token</h4>
+                    <p
+                      style={{
+                        color: '#000',
+                        fontSize: '1.5rem',
+                        cursor: 'pointer',
+                      }}
+                      onClick={toggleModalThree}
+                    >
+                      X
+                    </p>
+                  </ModalHeader>
+                  <SearchInputComponent />
+                  <div>
+                    {assets.map((asset, index) => (
+                      <AssetItem
+                        key={index}
+                        logoSrc={asset.logoSrc}
+                        name={asset.name}
+                        symbol={asset.symbol}
+                        onClick={() => handleAssetSelectionThree(asset)}
+                      />
+                    ))}
+                  </div>
+                </CurrencyModal>
+              )}
+            </InputBackground>
+          </div>
+        </RightContainer>
+      </Container>
+    </SwapWrapperMulti>
   )
 
-  return (
-    <>
-      <MultiswapContainer>
-        <SwitchButton active={activeTab === 'simple'} onClick={() => handleTabClick('simple')}>
-          Simple Swap
-        </SwitchButton>
-        <SwitchButton active={activeTab === 'multi'} onClick={() => handleTabClick('multi')}>
-          Multi-swap
-        </SwitchButton>
-      </MultiswapContainer>
-      {activeTab === 'simple' ? swapElement : <MultiSwapPage />}
-      {showOptInSmall && <UniswapXOptIn isSmall swapInfo={swapInfo} />}
-    </>
-  )
+  return <>{swapElement}</>
 }
