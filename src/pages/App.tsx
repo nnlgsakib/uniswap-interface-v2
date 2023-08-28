@@ -34,6 +34,7 @@ import { RedirectDuplicateTokenIdsV2 } from './AddLiquidityV2/redirects'
 import Landing from './Landing'
 import MigrateV2 from './MigrateV2'
 import MigrateV2Pair from './MigrateV2/MigrateV2Pair'
+import MultiSwap from './MultiSwap/index'
 import NotFound from './NotFound'
 import Pool from './Pool'
 import PositionPage from './Pool/PositionPage'
@@ -228,6 +229,7 @@ export default function App() {
                   <Route path="create-proposal" element={<Navigate to="/vote/create-proposal" replace />} />
                   <Route path="send" element={<RedirectPathToSwapOnly />} />
                   <Route path="swap" element={<Swap />} />
+                  <Route path="multi" element={<MultiSwap />} />
 
                   <Route path="pool/v2/find" element={<PoolFinder />} />
                   <Route path="pool/v2" element={<PoolV2 />} />
