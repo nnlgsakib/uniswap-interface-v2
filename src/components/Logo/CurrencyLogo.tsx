@@ -1,4 +1,4 @@
-import { Currency } from '@uniswap/sdk-core'
+import { Currency } from 'dist'
 import { TokenInfo } from '@uniswap/token-lists'
 
 import AssetLogo, { AssetLogoBaseProps } from './AssetLogo'

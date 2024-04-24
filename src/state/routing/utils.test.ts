@@ -1,4 +1,4 @@
-import { ChainId, Token } from '@uniswap/sdk-core'
+import { ChainId, Token } from 'dist'
 import { nativeOnChain } from 'constants/tokens'
 
 import { PoolType } from './types'

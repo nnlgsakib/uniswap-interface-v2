@@ -1,4 +1,4 @@
-import { ChainId } from '@uniswap/sdk-core'
+import { ChainId } from 'dist'
 
 import { ExplorerDataType, getExplorerLink } from './getExplorerLink'
 

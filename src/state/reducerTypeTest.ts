@@ -1,4 +1,4 @@
-import { ChainId } from '@uniswap/sdk-core'
+import { ChainId } from 'dist'
 import { TokenList } from '@uniswap/token-lists'
 import { ConnectionType } from 'connection/types'
 import { SupportedLocale } from 'constants/locales'

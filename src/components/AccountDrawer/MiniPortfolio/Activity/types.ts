@@ -1,4 +1,4 @@
-import { ChainId, Currency } from '@uniswap/sdk-core'
+import { ChainId, Currency } from 'dist'
 import { TransactionStatus } from 'graphql/data/__generated__/types-and-hooks'
 import { UniswapXOrderStatus } from 'lib/hooks/orders/types'
 

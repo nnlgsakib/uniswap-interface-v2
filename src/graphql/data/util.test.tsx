@@ -1,4 +1,4 @@
-import { ChainId } from '@uniswap/sdk-core'
+import { ChainId } from 'dist'
 
 import { Chain } from './__generated__/types-and-hooks'
 import { isSupportedGQLChain, supportedChainIdFromGQLChain } from './util'

@@ -1,4 +1,4 @@
-import { Percent, TradeType } from '@uniswap/sdk-core'
+import { Percent, TradeType } from 'dist'
 import { useWeb3React } from '@web3-react/core'
 import { PermitSignature } from 'hooks/usePermitAllowance'
 import { useCallback } from 'react'

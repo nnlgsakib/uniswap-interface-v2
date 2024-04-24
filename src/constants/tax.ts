@@ -1,4 +1,4 @@
-import { ChainId, Currency, Percent } from '@uniswap/sdk-core'
+import { ChainId, Currency, Percent } from 'dist'
 
 import { ZERO_PERCENT } from './misc'
 

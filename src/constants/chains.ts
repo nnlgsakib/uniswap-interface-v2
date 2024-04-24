@@ -1,4 +1,4 @@
-import { ChainId, SUPPORTED_CHAINS, SupportedChainsType } from '@uniswap/sdk-core'
+import { ChainId, SUPPORTED_CHAINS, SupportedChainsType } from 'dist'
 
 export const UniWalletSupportedChains = [
   ChainId.MAINNET,
@@ -24,6 +24,7 @@ export const CHAIN_IDS_TO_NAMES = {
   [ChainId.AVALANCHE]: 'avalanche',
   [ChainId.BASE]: 'base',
   [ChainId.BASE_GOERLI]: 'base_goerli',
+  [ChainId.MIND]: 'mind',
 } as const
 
 // Include ChainIds in this array if they are not supported by the UX yet, but are already in the SDK.
@@ -89,6 +90,7 @@ export const L1_CHAIN_IDS = [
   ChainId.CELO_ALFAJORES,
   ChainId.BNB,
   ChainId.AVALANCHE,
+  ChainId.MIND
 ] as const
 
 export type SupportedL1ChainId = (typeof L1_CHAIN_IDS)[number]
@@ -118,6 +120,7 @@ export function getChainPriority(chainId: ChainId): number {
     case ChainId.MAINNET:
     case ChainId.GOERLI:
     case ChainId.SEPOLIA:
+    case ChainId.MIND:  
       return 0
     case ChainId.ARBITRUM_ONE:
     case ChainId.ARBITRUM_GOERLI:

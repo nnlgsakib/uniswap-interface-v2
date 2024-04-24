@@ -1,5 +1,5 @@
 import { SkipToken, skipToken } from '@reduxjs/toolkit/query/react'
-import { Currency, CurrencyAmount, TradeType } from '@uniswap/sdk-core'
+import { Currency, CurrencyAmount, TradeType } from 'dist'
 import { useForceUniswapXOn } from 'featureFlags/flags/forceUniswapXOn'
 import { useFotAdjustmentsEnabled } from 'featureFlags/flags/fotAdjustments'
 import { useUniswapXEnabled } from 'featureFlags/flags/uniswapx'

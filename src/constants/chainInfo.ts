@@ -1,4 +1,4 @@
-import { ChainId } from '@uniswap/sdk-core'
+import { ChainId } from 'dist'
 import bnbCircleLogoUrl from 'assets/images/bnbCircle.svg'
 import ethereumLogoUrl from 'assets/images/ethereum-logo.png'
 import polygonCircleLogoUrl from 'assets/images/polygonCircle.png'
@@ -73,6 +73,16 @@ const CHAIN_INFO: ChainInfoMap = {
     label: 'Ethereum',
     logoUrl: ethereumLogoUrl,
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    color: darkTheme.chain_1,
+  },
+  [ChainId.MIND]: {
+    networkType: NetworkType.L1,
+    docs: 'https://docs.uniswap.org/',
+    explorer: 'https://etherscan.io/',
+    infoLink: 'https://info.uniswap.org/#/',
+    label: 'mind',
+    logoUrl: ethereumLogoUrl,
+    nativeCurrency: { name: 'MIND', symbol: 'MIND', decimals: 18 },
     color: darkTheme.chain_1,
   },
   [ChainId.GOERLI]: {

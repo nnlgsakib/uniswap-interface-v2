@@ -1,4 +1,4 @@
-import { ChainId, CurrencyAmount, Percent, Token, TradeType } from '@uniswap/sdk-core'
+import { ChainId, CurrencyAmount, Percent, Token, TradeType } from 'dist'
 import { V3Route } from '@uniswap/smart-order-router'
 import { FeeAmount, Pool } from '@uniswap/v3-sdk'
 import { ZERO_PERCENT } from 'constants/misc'
